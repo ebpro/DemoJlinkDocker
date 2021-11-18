@@ -1,0 +1,19 @@
+FROM maven:3.8.3-eclipse-temurin-17 as build       
+
+WORKDIR /app
+
+COPY pom.xml .
+COPY src src
+
+RUN --mount=type=cache,id=mvncache,target=/root/.m2/repository,rw \
+	mvn -B package && \
+	jlink --add-modules fr.univtln.bruno \
+	    --module-path ${JAVA_HOME}/jmods:target/DemoJlinkDocker-1.0-SNAPSHOT.jar \
+	    --output target/jlink-image \
+	    --compress=2 \
+	    --launcher myapp=fr.univtln.bruno/fr.univtln.bruno.App
+
+
+FROM debian:bullseye-20211011-slim
+COPY --from=build /app/target/jlink-image /app
+ENTRYPOINT ["/app/bin/myapp"]
